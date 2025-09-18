@@ -1,0 +1,9 @@
+*.ps1xml
+*.psc1
+*.pfx
+*.snk
+*.log
+Thumbs.db
+desktop.ini
+.vscode/
+*.code-workspace
