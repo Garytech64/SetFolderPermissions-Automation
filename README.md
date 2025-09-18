@@ -2,7 +2,6 @@
 
 ## Project Structure
 
-```
 SetFolderPermissions-Automation/
 │
 ├─ Scripts/
@@ -17,7 +16,9 @@ SetFolderPermissions-Automation/
 ├─ Logs/ # Placeholder for log files (if needed)
 ├─ README.md
 └─ .gitignore
-```
+
+markdown
+Copy code
 
 ---
 
@@ -28,27 +29,27 @@ SetFolderPermissions-Automation/
 - Creates subfolders for Managers
 - Sets NTFS permissions for each department and manager group
 - Verifies and audits permissions after setup
-- Run on: FS1 (file server)
-- Requires: Domain admin privileges
+- **Run on:** FS1 (file server)
+- **Requires:** Domain admin privileges
 
 ### ClientSetup.ps1
 - Maps network drives for each department
 - Configures domain-joined client machines (example: joining policies, mapped drives)
-- Run on: Client machines
-- Requires: Domain user with appropriate rights
+- **Run on:** Client machines
+- **Requires:** Domain user with appropriate rights
 
 ### ADSetup.ps1
 - Optionally sets up Active Directory objects (OUs, users, groups)
 - Assigns users to groups
-- Run on: DC1 (domain controller)
-- Requires: Domain admin privileges
+- **Run on:** DC1 (domain controller)
+- **Requires:** Domain admin privileges
 
 ### GoldenImagePrep.ps1
 - Prepares a Windows 10 VM for golden image creation
 - Clears temp files and old user profiles
 - Runs Sysprep with generalize and shutdown options
-- Run on: Windows 10 VM
-- Requires: Local admin privileges
+- **Run on:** Windows 10 VM
+- **Requires:** Local admin privileges
 
 ---
 
@@ -62,30 +63,24 @@ SetFolderPermissions-Automation/
 
 ## Usage
 
-Clone the repository:
-
+### Clone the repository
 `powershell
 git clone https://github.com/Garytech64/SetFolderPermissions-Automation.git
 cd SetFolderPermissions-Automation
-Run scripts in order:
-
-On DC1 (optional):
-
+Run scripts in order
+On DC1 (optional)
 powershell
 Copy code
 .\Scripts\ADSetup.ps1
-On FS1:
-
+On FS1
 powershell
 Copy code
 .\Scripts\SetFolderPermissions.ps1
-On client machines (optional):
-
+On client machines (optional)
 powershell
 Copy code
 .\Scripts\ClientSetup.ps1
-On Windows 10 VM for golden image (optional):
-
+On Windows 10 VM for golden image (optional)
 powershell
 Copy code
 .\Scripts\GoldenImagePrep.ps1
