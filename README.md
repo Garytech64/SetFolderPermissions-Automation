@@ -1,5 +1,24 @@
 ﻿# SetFolderPermissions-Automation
 
+## Project Structure
+
+```
+SetFolderPermissions-Automation/
+│
+├─ Scripts/
+│ ├─ SetFolderPermissions.ps1 # Creates department and manager folders with NTFS permissions
+│ ├─ ClientSetup.ps1 # Configures domain clients (optional)
+│ ├─ ADSetup.ps1 # Configures Active Directory (optional)
+│ ├─ GoldenImagePrep.ps1 # Prepares Windows 10 VM for golden image
+│
+├─ LabConfigs/
+│ └─ GoldenImageSettings/ # Placeholder folder for golden image configuration files (.gitkeep)
+│
+├─ Logs/ # Placeholder for log files (if needed)
+├─ README.md
+└─ .gitignore
+```
+
 ---
 
 ## Scripts
