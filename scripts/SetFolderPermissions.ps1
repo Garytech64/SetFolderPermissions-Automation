@@ -1,3 +1,20 @@
+<#
+.SYNOPSIS
+Creates department and manager folders with NTFS permissions.
+
+.DESCRIPTION
+- Creates department folders: Finance, HR, Sales, IT, Workshop, HSSQ, Directors, General
+- Creates subfolders for Managers
+- Sets NTFS permissions for each department and manager group
+- Verifies and audits permissions after setup
+
+.RUNON
+FS1 (File Server)
+
+.REQUIRES
+Domain admin privileges
+#>
+
 # SetFolderPermissions.ps1
 # ==========================
 # Script to set NTFS permissions on departmental folders
