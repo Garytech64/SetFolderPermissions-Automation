@@ -1,5 +1,9 @@
 ﻿# SetFolderPermissions-Automation
 
+This project contains PowerShell scripts for automating folder creation, NTFS permissions, Active Directory setup, client configuration, and Windows 10 golden image preparation in a Windows domain environment. All scripts now use a centralized **logging module** (Modules\Logging.psm1) for consistent logging and error handling.
+
+---
+
 ## Project Structure
 
 SetFolderPermissions-Automation/
@@ -9,11 +13,15 @@ SetFolderPermissions-Automation/
 │ ├─ ClientSetup.ps1 # Configures domain clients (optional)
 │ ├─ ADSetup.ps1 # Configures Active Directory (optional)
 │ ├─ GoldenImagePrep.ps1 # Prepares Windows 10 VM for golden image
+│ ├─ QuickCheck.ps1 # Optional script to verify environment setup
+│
+├─ Modules/
+│ └─ Logging.psm1 # Centralized logging module for all scripts
 │
 ├─ LabConfigs/
 │ └─ GoldenImageSettings/ # Placeholder folder for golden image configuration files (.gitkeep)
 │
-├─ Logs/ # Placeholder for log files (if needed)
+├─ Logs/ # Folder for script execution logs
 ├─ README.md
 └─ .gitignore
 
@@ -25,81 +33,85 @@ Copy code
 ## Scripts
 
 ### SetFolderPermissions.ps1
-- Creates department folders (Finance, HR, Sales, IT, Workshop, HSSQ, Directors, General)  
-- Creates subfolders for Managers  
-- Sets NTFS permissions for each department and manager group  
-- Verifies and audits permissions after setup  
-- **Run on:** FS1 (file server)  
-- **Requires:** Domain admin privileges  
+- Creates department folders (Finance, HR, Sales, IT, Workshop, HSSQ, Directors, General)
+- Creates subfolders for Managers
+- Sets NTFS permissions for each department and manager group
+- Verifies and audits permissions after setup
+- **Run on:** FS1 (file server)
+- **Requires:** Domain admin privileges
 
-### ClientSetup.ps1
-- Maps network drives for each department  
-- Configures domain-joined client machines (example: joining policies, mapped drives)  
-- **Run on:** Client machines  
-- **Requires:** Domain user with appropriate rights  
+### ClientSetup.ps1 (Optional)
+- Maps network drives for each department
+- Configures domain-joined client machines
+- **Run on:** Client machines
+- **Requires:** Domain user with appropriate rights
 
-### ADSetup.ps1
-- Optionally sets up Active Directory objects (OUs, users, groups)  
-- Assigns users to groups  
-- **Run on:** DC1 (domain controller)  
-- **Requires:** Domain admin privileges  
+### ADSetup.ps1 (Optional)
+- Creates Active Directory objects (OUs, users, groups)
+- Assigns users to groups
+- **Run on:** DC1 (domain controller)
+- **Requires:** Domain admin privileges
 
 ### GoldenImagePrep.ps1
-- Prepares a Windows 10 VM for golden image creation  
-- Cleans temp files and old user profiles  
-- **Run on:** Windows 10 VM  
-- **Requires:** Local admin privileges  
+- Cleans up user profiles, temp files, event logs, prefetch, and Recycle Bin
+- Runs Sysprep with /generalize /oobe /shutdown options
+- **Run on:** Windows 10 VM (before creating golden image)
+- **Requires:** Local admin privileges
+
+### QuickCheck.ps1 (Optional)
+- Verifies that folder structures, NTFS permissions, and client configurations are applied correctly
+- **Run on:** FS1 or client machines
+- **Requires:** Domain admin or domain user depending on checks
 
 ---
 
 ## Lab Configuration
 
-- LabConfigs/GoldenImageSettings/ – Placeholder for settings related to Windows 10 golden image  
-- .gitkeep file ensures the folder is tracked in Git  
-- Logs/ folder can be used to store script execution logs  
+- LabConfigs/GoldenImageSettings/ – Placeholder for Windows 10 golden image configuration
+- .gitkeep ensures the folder is tracked in Git
+- Logs/ stores script execution logs
 
 ---
 
-## Step-by-Step Run Sequence
+## Usage
 
-Follow this order to build and configure your lab environment:
+1. **Clone the repository:**
 
-1. **Prepare Active Directory (optional)**  
-   On **DC1 (Domain Controller):**  
-   `powershell
-   .\Scripts\ADSetup.ps1
-Creates OUs, groups, and users if not already configured.
+`powershell
+git clone https://github.com/Garytech64/SetFolderPermissions-Automation.git
+cd SetFolderPermissions-Automation
+Run scripts in order:
 
-Configure File Server
-On FS1 (File Server):
+On DC1 (optional):
+
+powershell
+Copy code
+.\Scripts\ADSetup.ps1
+On FS1:
 
 powershell
 Copy code
 .\Scripts\SetFolderPermissions.ps1
-Creates departmental and manager folders and sets NTFS permissions.
-
-Configure Clients (optional)
-On Windows 10 clients:
+On client machines (optional):
 
 powershell
 Copy code
 .\Scripts\ClientSetup.ps1
-Maps drives and applies domain client configurations.
-
-Prepare Golden Image (optional)
-On Windows 10 VM (before cloning):
+On Windows 10 VM for golden image (optional):
 
 powershell
 Copy code
 .\Scripts\GoldenImagePrep.ps1
-Cleans up the VM and runs Sysprep (generalize + shutdown) so the VM can be used as a reusable golden image.
+Verify setup (optional):
 
-✅ After following these steps, your lab will have:
+powershell
+Copy code
+.\Scripts\QuickCheck.ps1
+⚠️ Ensure Modules\Logging.psm1 exists in the Modules folder before running any scripts.
 
-A domain controller with users and groups
+Notes
+All scripts now include logging via Logging.psm1. Logs are written to the Logs folder by default.
 
-A file server with properly secured folders
+Optional scripts are provided for convenience; GPOs may already handle some tasks such as mapped drives.
 
-Clients with mapped drives
-
-A Windows 10 golden image ready for deployment
+Before running GoldenImagePrep.ps1, ensure the VM is removed from the domain and joined to a WORKGROUP.

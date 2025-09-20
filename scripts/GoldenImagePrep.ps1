@@ -4,7 +4,8 @@ Prepares a Windows 10 VM for golden image creation.
 
 .DESCRIPTION
 - Cleans temp files and old user profiles
-- Clears logs, prefetch, and other system traces
+- Clears logs, prefetch, and recycle bin
+- Cleans Windows Update cache
 - Runs Sysprep with generalize and shutdown options
 
 .RUNON
@@ -14,50 +15,58 @@ Windows 10 VM
 Local admin privileges
 #>
 
-# GoldenImagePrep.ps1
-# Cleans up Windows 10 before running Sysprep for golden image creation
+# Import logging module
+Import-Module "$PSScriptRoot\..\Modules\Logging.psm1"
 
-Write-Host "=== Golden Image Preparation Started ===" -ForegroundColor Cyan
+Write-Log "=== Golden Image Preparation Started ==="
 
-# 1. Remove domain membership reminder
-Write-Host "[INFO] Ensure this VM has been removed from the domain and joined to WORKGROUP." -ForegroundColor Yellow
+try {
+    # Step 1: Ensure VM is not joined to domain
+    Write-Log "[INFO] Ensure this VM has been removed from the domain and joined to WORKGROUP."
 
-# 2. Delete all user profiles except Administrator & Public
-Write-Host "[STEP] Cleaning up user profiles..." -ForegroundColor Green
-Get-WmiObject Win32_UserProfile | Where-Object {
-    $_.LocalPath -notlike "C:\Users\Administrator*" -and
-    $_.LocalPath -notlike "C:\Users\Public"
-} | ForEach-Object {
-    try {
-        $_.Delete()
-        Write-Host "Deleted profile: $($_.LocalPath)" -ForegroundColor DarkGray
-    } catch {
-        Write-Warning "Failed to delete profile: $($_.LocalPath)"
+    # Step 2: Delete all user profiles except Administrator & Public
+    Write-Log "[STEP] Cleaning up user profiles..."
+    $Profiles = Get-WmiObject Win32_UserProfile | Where-Object {
+        $_.LocalPath -notlike "C:\Users\Administrator*" -and $_.LocalPath -notlike "C:\Users\Public"
     }
+    foreach ($Profile in $Profiles) {
+        try {
+            $Profile.Delete()
+            Write-Log "Deleted profile: $($Profile.LocalPath)"
+        } catch {
+            Write-Log "Failed to delete profile: $($Profile.LocalPath)" "WARNING"
+        }
+    }
+
+    # Step 3: Clear temp folders
+    Write-Log "[STEP] Clearing temp files..."
+    Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+    # Step 4: Clear event logs
+    Write-Log "[STEP] Clearing event logs..."
+    try {
+        wevtutil el | ForEach-Object { wevtutil cl $_ }
+    } catch {
+        Write-Log "Failed to clear some event logs: $_" "WARNING"
+    }
+
+    # Step 5: Clean Windows Update cache
+    Write-Log "[STEP] Cleaning Windows Update cache..."
+    Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Start-Service -Name wuauserv -ErrorAction SilentlyContinue
+
+    # Step 6: Clear Prefetch and Recycle Bin
+    Write-Log "[STEP] Clearing Prefetch and Recycle Bin..."
+    Remove-Item -Path "C:\Windows\Prefetch\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+
+    # Step 7: Run Sysprep
+    Write-Log "[FINAL STEP] Running Sysprep..."
+    & "$env:SystemRoot\System32\Sysprep\Sysprep.exe" /oobe /generalize /shutdown
+} catch {
+    Write-Log "Error in GoldenImagePrep: $_" "ERROR"
 }
 
-# 3. Clear temp files
-Write-Host "[STEP] Clearing temp files..." -ForegroundColor Green
-Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
-
-# 4. Clear event logs
-Write-Host "[STEP] Clearing event logs..." -ForegroundColor Green
-wevtutil el | ForEach-Object { wevtutil cl $_ }
-
-# 5. Clean Windows Update cache
-Write-Host "[STEP] Cleaning Windows Update cache..." -ForegroundColor Green
-Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue
-Remove-Item -Path "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
-Start-Service -Name wuauserv -ErrorAction SilentlyContinue
-
-# 6. Clear Prefetch and Recycle Bin
-Write-Host "[STEP] Clearing Prefetch and Recycle Bin..." -ForegroundColor Green
-Remove-Item -Path "C:\Windows\Prefetch\*" -Recurse -Force -ErrorAction SilentlyContinue
-Clear-RecycleBin -Force -ErrorAction SilentlyContinue
-
-# 7. Run Sysprep
-Write-Host "[FINAL STEP] Running Sysprep..." -ForegroundColor Cyan
-& "$env:SystemRoot\System32\Sysprep\Sysprep.exe" /oobe /generalize /shutdown
-
-Write-Host "=== Golden Image Preparation Completed ===" -ForegroundColor Cyan
+Write-Log "=== Golden Image Preparation Completed ==="

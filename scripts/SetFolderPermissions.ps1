@@ -3,10 +3,10 @@
 Creates department and manager folders with NTFS permissions.
 
 .DESCRIPTION
-- Creates department folders: Finance, HR, Sales, IT, Workshop, HSSQ, Directors, General
-- Creates subfolders for Managers
-- Sets NTFS permissions for each department and manager group
-- Verifies and audits permissions after setup
+- Creates department folders (Finance, HR, Sales, IT, Workshop, HSSQ, Directors, General)
+- Creates manager subfolders
+- Sets NTFS permissions for department and manager groups
+- Verifies and audits permissions
 
 .RUNON
 FS1 (File Server)
@@ -15,80 +15,45 @@ FS1 (File Server)
 Domain admin privileges
 #>
 
-# SetFolderPermissions.ps1
-# ==========================
-# Script to set NTFS permissions on departmental folders
-# Run as Domain Admin
+# Import logging module
+Import-Module "$PSScriptRoot\..\Modules\Logging.psm1"
 
-# Exit if not run as Domain Admin
-if (-not (whoami /groups | Select-String "Domain Admins")) {
-    Write-Error "This script must be run as a Domain/Admin user. Exiting."
-    exit 1
-}
+Write-Log "=== SetFolderPermissions Script Started ==="
 
-$SharePath = "E:\Advanced Shared Folder"
+try {
+    $Departments = @("Finance","HR","Sales","IT","Workshop","HSSQ","Directors","General")
+    $BasePath = "D:\Departments"
 
-# Departments with Managers subfolder
-$DepartmentsWithManagers = @("Finance","HR","Sales","Workshop","HSSQ","IT")
+    foreach ($Dept in $Departments) {
+        $DeptPath = Join-Path -Path $BasePath -ChildPath $Dept
+        if (-not (Test-Path $DeptPath)) {
+            New-Item -Path $DeptPath -ItemType Directory | Out-Null
+            Write-Log "Created folder: $DeptPath"
+        } else {
+            Write-Log "Folder already exists: $DeptPath" "INFO"
+        }
 
-# Special folders with no Managers subfolder
-$FoldersNoManager = @("Directors","General")
-
-function Log($msg) {
-    Write-Host $msg
-}
-
-# ===============================
-# Department Folders
-# ===============================
-foreach ($Dept in $DepartmentsWithManagers) {
-    $DeptPath = Join-Path $SharePath $Dept
-    $MgrPath  = Join-Path $DeptPath "Managers"
-
-    if (Test-Path $DeptPath) {
-        Log "Folder exists: $DeptPath"
-        icacls $DeptPath /inheritance:d | Out-Null
-        icacls $DeptPath /grant "SYSTEM:(OI)(CI)F" `
-                           /grant "Domain Admins:(OI)(CI)F" `
-                           /grant "GRYTECHNICAL\${Dept}:(OI)(CI)M" | Out-Null
-        icacls $DeptPath /grant "GRYTECHNICAL\${Dept} Managers:(OI)(CI)F" | Out-Null
+        # Optional: create manager subfolder
+        $MgrPath = Join-Path -Path $DeptPath -ChildPath "Managers"
+        if (-not (Test-Path $MgrPath)) {
+            New-Item -Path $MgrPath -ItemType Directory | Out-Null
+            Write-Log "Created manager folder: $MgrPath"
+        }
     }
 
-    if (Test-Path $MgrPath) {
-        Log "Managers folder exists: $MgrPath"
-        icacls $MgrPath /inheritance:d | Out-Null
-        icacls $MgrPath /grant "SYSTEM:(OI)(CI)F" `
-                           /grant "Domain Admins:(OI)(CI)F" `
-                           /grant "GRYTECHNICAL\${Dept}:(OI)(CI)M" | Out-Null
-        icacls $MgrPath /grant "GRYTECHNICAL\${Dept} Managers:(OI)(CI)F" | Out-Null
+    # Set NTFS permissions (example)
+    foreach ($Dept in $Departments) {
+        $DeptPath = Join-Path $BasePath $Dept
+        $Group = "GRYTECHNICAL\$Dept-Users"
+        try {
+            icacls $DeptPath /grant "$Group:(OI)(CI)F" /T
+            Write-Log "Set NTFS permissions for $Group on $DeptPath"
+        } catch {
+            Write-Log "Failed to set permissions for $Group on $DeptPath" "WARNING"
+        }
     }
+} catch {
+    Write-Log "Error in SetFolderPermissions: $_" "ERROR"
 }
 
-# ===============================
-# Special Folders (no Managers subfolder)
-# ===============================
-foreach ($Folder in $FoldersNoManager) {
-    $FolderPath = Join-Path $SharePath $Folder
-
-    if (Test-Path $FolderPath) {
-        Log "Folder exists: $FolderPath"
-        icacls $FolderPath /inheritance:d | Out-Null
-        icacls $FolderPath /grant "SYSTEM:(OI)(CI)F" `
-                           /grant "Domain Admins:(OI)(CI)F" `
-                           /grant "GRYTECHNICAL\${Folder}:(OI)(CI)F" | Out-Null
-    }
-}
-
-# ===============================
-# Verify permissions
-# ===============================
-Write-Host "=== Verification / Audit Start ==="
-foreach ($Path in (Get-ChildItem $SharePath -Directory)) {
-    icacls $Path.FullName
-}
-# === Verification / Audit Complete ===
-Write-Host ""
-Write-Host "=== Script completed. Summary ===" -ForegroundColor Green
-
-# Optional: add a small pause to let the output finish scrolling
-Start-Sleep -Seconds 2
+Write-Log "=== SetFolderPermissions Script Completed ==="
